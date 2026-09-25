@@ -1,6 +1,6 @@
 <div align="center">
 
-# 🧠 Legacy Code Explainer
+# Legacy Code Explainer
 
 ### IA local que entende sistemas Java Spring Boot legados — e ajuda a modernizá-los
 
