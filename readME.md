@@ -192,6 +192,4 @@ MIT — sinta-se livre para usar, estudar e evoluir este projeto.
 
 <div align="center">
 
-Feito como projeto de estudo e portfólio, focado em RAG aplicado a um problema real de engenharia.
-
 </div>
