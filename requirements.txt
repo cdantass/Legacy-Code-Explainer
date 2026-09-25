@@ -1,0 +1,10 @@
+fastapi
+uvicorn
+gitpython
+tree-sitter
+tree-sitter-languages
+sentence-transformers
+chromadb
+ollama
+pydantic
+python-multipart

@@ -1,0 +1,440 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Legacy Code Explainer</title>
+<style>
+  :root {
+    --bg: #0f1117;
+    --panel: #171a23;
+    --panel2: #1f2330;
+    --border: #2a2f3d;
+    --text: #e6e6e6;
+    --muted: #9aa0ac;
+    --accent: #6c8cff;
+    --red: #ff6b6b;
+    --yellow: #ffd166;
+    --green: #6ee7a0;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    font-family: -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+  }
+  .layout { display: flex; min-height: 100vh; }
+  .sidebar {
+    width: 320px;
+    background: var(--panel);
+    border-right: 1px solid var(--border);
+    padding: 20px;
+    flex-shrink: 0;
+  }
+  .sidebar h1 { font-size: 20px; margin: 0 0 4px; }
+  .sidebar .subtitle { color: var(--muted); font-size: 13px; margin-bottom: 16px; }
+  .status {
+    padding: 8px 12px;
+    border-radius: 6px;
+    font-size: 13px;
+    margin-bottom: 16px;
+  }
+  .status.ok { background: #113322; color: var(--green); }
+  .status.fail { background: #331313; color: var(--red); }
+  .field label { font-size: 13px; color: var(--muted); display: block; margin-bottom: 4px; }
+  .field input {
+    width: 100%;
+    padding: 8px 10px;
+    background: var(--panel2);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    color: var(--text);
+    margin-bottom: 10px;
+    font-size: 13px;
+  }
+  button {
+    cursor: pointer;
+    border: none;
+    border-radius: 6px;
+    padding: 10px 14px;
+    font-size: 13px;
+    font-weight: 600;
+  }
+  .btn-primary { background: var(--accent); color: white; width: 100%; }
+  .btn-secondary { background: var(--panel2); color: var(--text); border: 1px solid var(--border); }
+  .btn-primary:disabled { opacity: 0.5; cursor: not-allowed; }
+  .resumo { margin-top: 16px; font-size: 13px; }
+  .resumo .item { display: flex; justify-content: space-between; padding: 3px 0; color: var(--muted); }
+  .resumo .total { font-size: 22px; font-weight: 700; color: var(--text); }
+
+  .main { flex: 1; padding: 24px 32px; max-width: 1000px; }
+  .tabs { display: flex; gap: 8px; margin-bottom: 20px; border-bottom: 1px solid var(--border); }
+  .tab {
+    padding: 10px 16px;
+    cursor: pointer;
+    color: var(--muted);
+    border-bottom: 2px solid transparent;
+    font-size: 14px;
+  }
+  .tab.active { color: var(--text); border-bottom-color: var(--accent); }
+  .panel { display: none; }
+  .panel.active { display: block; }
+
+  .empty-state {
+    text-align: center;
+    padding: 60px 20px;
+    color: var(--muted);
+  }
+
+  .examples { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 16px; }
+  .example-chip {
+    background: var(--panel2);
+    border: 1px solid var(--border);
+    color: var(--muted);
+    padding: 6px 12px;
+    border-radius: 16px;
+    font-size: 12px;
+    cursor: pointer;
+  }
+  .example-chip:hover { color: var(--text); border-color: var(--accent); }
+
+  .chat-input-row { display: flex; gap: 8px; margin-bottom: 20px; }
+  .chat-input-row input {
+    flex: 1;
+    padding: 10px 14px;
+    background: var(--panel2);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    color: var(--text);
+    font-size: 14px;
+  }
+
+  .msg { margin-bottom: 16px; }
+  .msg .bubble {
+    padding: 12px 16px;
+    border-radius: 10px;
+    font-size: 14px;
+    line-height: 1.5;
+    white-space: pre-wrap;
+  }
+  .msg.user .bubble { background: var(--accent); color: white; display: inline-block; max-width: 80%; }
+  .msg.assistant .bubble { background: var(--panel); border: 1px solid var(--border); }
+  .msg.user { text-align: right; }
+  .fontes {
+    margin-top: 6px;
+    font-size: 12px;
+    color: var(--muted);
+    cursor: pointer;
+  }
+  .fontes-list { display: none; margin-top: 6px; font-size: 12px; color: var(--muted); }
+  .fontes-list.open { display: block; }
+
+  .metrics { display: flex; gap: 16px; margin-bottom: 20px; }
+  .metric-box {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 14px 18px;
+    flex: 1;
+  }
+  .metric-box .value { font-size: 26px; font-weight: 700; }
+  .metric-box .label { font-size: 12px; color: var(--muted); margin-top: 2px; }
+
+  .explicacao {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 18px;
+    margin-bottom: 20px;
+    white-space: pre-wrap;
+    font-size: 14px;
+    line-height: 1.6;
+  }
+
+  .problema {
+    padding: 10px 12px;
+    border-left: 3px solid var(--border);
+    background: var(--panel);
+    margin-bottom: 8px;
+    border-radius: 4px;
+    font-size: 13px;
+  }
+  .problema.alta { border-left-color: var(--red); }
+  .problema.media { border-left-color: var(--yellow); }
+  .problema.baixa { border-left-color: var(--green); }
+  .problema .cat { font-weight: 600; margin-right: 6px; }
+  .problema .arq { color: var(--muted); }
+
+  .spinner {
+    display: inline-block;
+    width: 14px; height: 14px;
+    border: 2px solid rgba(255,255,255,0.3);
+    border-top-color: white;
+    border-radius: 50%;
+    animation: spin 0.7s linear infinite;
+    margin-right: 8px;
+    vertical-align: middle;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .hidden { display: none; }
+</style>
+</head>
+<body>
+
+<div class="layout">
+  <div class="sidebar">
+    <h1>🧠 Legacy Code Explainer</h1>
+    <div class="subtitle">Análise de sistemas Java Spring Boot legados com IA local</div>
+
+    <div id="apiStatus" class="status">Verificando API...</div>
+
+    <div class="field">
+      <label>URL do repositório Git</label>
+      <input id="repoUrl" type="text" value="https://github.com/spring-projects/spring-petclinic">
+    </div>
+    <button id="btnIndex" class="btn-primary">📥 Indexar projeto</button>
+
+    <div id="resumoBox" class="resumo hidden">
+      <div style="margin-top:16px;">
+        <div class="total" id="resumoTotal">0</div>
+        <div class="label" style="color:var(--muted); font-size:12px;">arquivos indexados</div>
+      </div>
+      <div id="resumoPorTipo" style="margin-top:10px;"></div>
+    </div>
+  </div>
+
+  <div class="main">
+    <div id="emptyState" class="empty-state">
+      👈 Indexe um repositório na barra lateral para começar.
+    </div>
+
+    <div id="appContent" class="hidden">
+      <div class="tabs">
+        <div class="tab active" data-tab="ask">💬 Perguntar sobre o código</div>
+        <div class="tab" data-tab="analyze">🔍 Análise de problemas (legado)</div>
+      </div>
+
+      <div id="panel-ask" class="panel active">
+        <div class="examples" id="examples"></div>
+        <div class="chat-input-row">
+          <input id="questionInput" type="text" placeholder="Digite sua pergunta sobre o código...">
+          <button id="btnAsk" class="btn-secondary">Enviar</button>
+        </div>
+        <div id="chatHistory"></div>
+      </div>
+
+      <div id="panel-analyze" class="panel">
+        <button id="btnAnalyze" class="btn-primary" style="width:auto; margin-bottom:20px;">🔎 Rodar análise completa</button>
+        <div id="analyzeResult"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+const API_URL = window.location.origin;
+
+const exemplos = [
+  "Onde acontece a autenticação?",
+  "Como funciona o cadastro de usuários?",
+  "Quais controllers existem?",
+  "Quais endpoints existem no sistema?",
+  "Quais services existem?"
+];
+
+const examplesEl = document.getElementById("examples");
+exemplos.forEach(ex => {
+  const chip = document.createElement("div");
+  chip.className = "example-chip";
+  chip.textContent = ex;
+  chip.onclick = () => { document.getElementById("questionInput").value = ex; askQuestion(); };
+  examplesEl.appendChild(chip);
+});
+
+async function checkApiStatus() {
+  const statusEl = document.getElementById("apiStatus");
+  try {
+    const r = await fetch(`${API_URL}/`);
+    if (r.ok) {
+      statusEl.textContent = "✅ API conectada";
+      statusEl.className = "status ok";
+    } else {
+      throw new Error();
+    }
+  } catch {
+    statusEl.textContent = "❌ API indisponível";
+    statusEl.className = "status fail";
+  }
+}
+checkApiStatus();
+
+document.querySelectorAll(".tab").forEach(tab => {
+  tab.onclick = () => {
+    document.querySelectorAll(".tab").forEach(t => t.classList.remove("active"));
+    document.querySelectorAll(".panel").forEach(p => p.classList.remove("active"));
+    tab.classList.add("active");
+    document.getElementById(`panel-${tab.dataset.tab}`).classList.add("active");
+  };
+});
+
+document.getElementById("btnIndex").onclick = async () => {
+  const url = document.getElementById("repoUrl").value.trim();
+  if (!url) return;
+
+  const btn = document.getElementById("btnIndex");
+  btn.disabled = true;
+  btn.innerHTML = '<span class="spinner"></span>Indexando...';
+
+  try {
+    const resp = await fetch(`${API_URL}/index`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ url })
+    });
+    const data = await resp.json();
+
+    if (!resp.ok) {
+      alert("Erro ao indexar: " + (data.detail || JSON.stringify(data)));
+      return;
+    }
+
+    document.getElementById("emptyState").classList.add("hidden");
+    document.getElementById("appContent").classList.remove("hidden");
+    document.getElementById("resumoBox").classList.remove("hidden");
+    document.getElementById("resumoTotal").textContent = data.resumo.total_arquivos;
+
+    const porTipoEl = document.getElementById("resumoPorTipo");
+    porTipoEl.innerHTML = "";
+    Object.entries(data.resumo.por_tipo || {})
+      .sort((a, b) => b[1] - a[1])
+      .forEach(([tipo, qtd]) => {
+        const row = document.createElement("div");
+        row.className = "item";
+        row.innerHTML = `<span>${tipo}</span><span>${qtd}</span>`;
+        porTipoEl.appendChild(row);
+      });
+
+    document.getElementById("chatHistory").innerHTML = "";
+    document.getElementById("analyzeResult").innerHTML = "";
+  } catch (e) {
+    alert("Falha ao conectar com a API: " + e.message);
+  } finally {
+    btn.disabled = false;
+    btn.textContent = "📥 Indexar projeto";
+  }
+};
+
+async function askQuestion() {
+  const input = document.getElementById("questionInput");
+  const question = input.value.trim();
+  if (!question) return;
+
+  const history = document.getElementById("chatHistory");
+
+  const userMsg = document.createElement("div");
+  userMsg.className = "msg user";
+  userMsg.innerHTML = `<div class="bubble">${escapeHtml(question)}</div>`;
+  history.prepend(userMsg);
+
+  input.value = "";
+  input.disabled = true;
+
+  const loadingMsg = document.createElement("div");
+  loadingMsg.className = "msg assistant";
+  loadingMsg.innerHTML = `<div class="bubble"><span class="spinner"></span>Pensando...</div>`;
+  history.insertBefore(loadingMsg, userMsg);
+
+  try {
+    const resp = await fetch(`${API_URL}/ask`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ question })
+    });
+    const data = await resp.json();
+
+    if (!resp.ok) {
+      loadingMsg.innerHTML = `<div class="bubble">Erro: ${escapeHtml(data.detail || "erro desconhecido")}</div>`;
+      return;
+    }
+
+    let fontesHtml = "";
+    if (data.fontes && data.fontes.length > 0) {
+      const listaFontes = data.fontes.map(f => `- ${f.arquivo} (${f.tipo})`).join("<br>");
+      fontesHtml = `
+        <div class="fontes" onclick="this.nextElementSibling.classList.toggle('open')">
+          📁 ${data.fontes.length} fonte(s) — clique para ver
+        </div>
+        <div class="fontes-list">${listaFontes}</div>
+      `;
+    }
+
+    loadingMsg.innerHTML = `<div class="bubble">${escapeHtml(data.answer)}</div>${fontesHtml}`;
+  } catch (e) {
+    loadingMsg.innerHTML = `<div class="bubble">Falha ao conectar com a API: ${e.message}</div>`;
+  } finally {
+    input.disabled = false;
+    input.focus();
+  }
+}
+
+document.getElementById("btnAsk").onclick = askQuestion;
+document.getElementById("questionInput").addEventListener("keydown", (e) => {
+  if (e.key === "Enter") askQuestion();
+});
+
+document.getElementById("btnAnalyze").onclick = async () => {
+  const btn = document.getElementById("btnAnalyze");
+  const resultEl = document.getElementById("analyzeResult");
+  btn.disabled = true;
+  btn.innerHTML = '<span class="spinner"></span>Analisando...';
+  resultEl.innerHTML = "";
+
+  try {
+    const resp = await fetch(`${API_URL}/analyze`, { method: "POST" });
+    const data = await resp.json();
+
+    if (!resp.ok) {
+      resultEl.innerHTML = `<div class="explicacao">Erro: ${escapeHtml(data.detail || "erro desconhecido")}</div>`;
+      return;
+    }
+
+    const bruto = data.relatorio_bruto;
+    const porSev = bruto.por_severidade || {};
+
+    let html = `
+      <div class="metrics">
+        <div class="metric-box"><div class="value">${bruto.arquivos_analisados}</div><div class="label">Arquivos analisados</div></div>
+        <div class="metric-box"><div class="value">${bruto.total_problemas}</div><div class="label">Problemas encontrados</div></div>
+        <div class="metric-box"><div class="value" style="color:var(--red)">${porSev.alta || 0}</div><div class="label">Severidade alta</div></div>
+      </div>
+      <div class="explicacao">${escapeHtml(data.explicacao)}</div>
+      <h3 style="font-size:15px; margin-bottom:10px;">📋 Problemas detalhados</h3>
+    `;
+
+    (bruto.problemas || []).forEach(p => {
+      html += `
+        <div class="problema ${p.severidade}">
+          <span class="cat">[${p.categoria}]</span>
+          <span class="arq">${p.arquivo}</span> — ${escapeHtml(p.descricao)}
+        </div>
+      `;
+    });
+
+    resultEl.innerHTML = html;
+  } catch (e) {
+    resultEl.innerHTML = `<div class="explicacao">Falha ao conectar com a API: ${e.message}</div>`;
+  } finally {
+    btn.disabled = false;
+    btn.textContent = "🔎 Rodar análise completa";
+  }
+};
+
+function escapeHtml(str) {
+  const div = document.createElement("div");
+  div.textContent = str;
+  return div.innerHTML;
+}
+</script>
+</body>
+</html>
